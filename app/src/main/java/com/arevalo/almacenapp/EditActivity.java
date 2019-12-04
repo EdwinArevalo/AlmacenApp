@@ -1,0 +1,96 @@
+  package com.arevalo.almacenapp;
+
+import android.support.v7.app.AppCompatActivity;
+import android.os.Bundle;
+import android.util.Log;
+import android.widget.EditText;
+import android.widget.ImageView;
+import android.widget.TextView;
+import android.widget.Toast;
+
+import com.arevalo.almacenapp.models.Producto;
+import com.arevalo.almacenapp.services.ApiService;
+import com.arevalo.almacenapp.services.ApiServiceGenerator;
+import com.squareup.picasso.Picasso;
+
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
+
+  public class EditActivity extends AppCompatActivity {
+
+      private static final String TAG = DetailActivity.class.getSimpleName();
+
+      private Long id;
+
+      private ImageView fotoImage;
+      private EditText nombreText;
+      private EditText detallesText;
+      private EditText precioText;
+
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_edit);
+
+        fotoImage = findViewById(R.id.foto_image);
+        nombreText = findViewById(R.id.nombre_text);
+        detallesText =findViewById(R.id.detalles_text);
+        precioText =findViewById(R.id.precio_text);
+
+        id = getIntent().getExtras().getLong("ID");
+        Log.e(TAG, "id:" + id);
+
+        initialize();
+    }
+
+
+      private void initialize() {
+
+          ApiService service = ApiServiceGenerator.createService(ApiService.class);
+
+          Call<Producto> call = service.showProducto(id);
+
+          call.enqueue(new Callback<Producto>() {
+              @Override
+              public void onResponse(Call<Producto> call, Response<Producto> response) {
+                  try {
+
+                      int statusCode = response.code();
+                      Log.d(TAG, "HTTP status code: " + statusCode);
+
+                      if (response.isSuccessful()) {
+
+                          Producto producto = response.body();
+                          Log.d(TAG, "producto: " + producto);
+
+                          String url = ApiService.API_BASE_URL + "/productos/images/" + producto.getImagen();
+                          Picasso.with(EditActivity.this).load(url).into(fotoImage);
+
+                          nombreText.setText(producto.getNombre());
+                          detallesText.setText(producto.getDetalles());
+                          precioText.setText("Precio: S/. " + producto.getPrecio());
+
+                      } else {
+                          Log.e(TAG, "onError: " + response.errorBody().string());
+                          throw new Exception("Error en el servicio");
+                      }
+
+                  } catch (Throwable t) {
+                      try {
+                          Log.e(TAG, "onThrowable: " + t.toString(), t);
+                          Toast.makeText(EditActivity.this, t.getMessage(), Toast.LENGTH_LONG).show();
+                      }catch (Throwable x){}
+                  }
+              }
+
+              @Override
+              public void onFailure(Call<Producto> call, Throwable t) {
+                  Log.e(TAG, "onFailure: " + t.toString());
+                  Toast.makeText(EditActivity.this, t.getMessage(), Toast.LENGTH_LONG).show();
+              }
+
+          });
+      }
+}
